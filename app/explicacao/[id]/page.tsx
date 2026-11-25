@@ -9,7 +9,15 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+
+export async function generateStaticParams() {
+  return appLinks.map((link) => ({
+    id: link.id,
+  }));
+}
+
 export default function ExplicacaoJogoPage({ params }: PageProps) {
+  
   const resolvedParams = use(params);
   const linkItem = appLinks.find((item) => item.id === resolvedParams.id);
 
