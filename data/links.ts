@@ -53,7 +53,7 @@ export const appLinks: AppLink[] = [
   {
     id: 'meu-jogo',
     title: 'Caverna da Luz',
-    url: 'public\jogos\caverna_da_luz_3_niveis_sons.html',
+    url: '/jogos/caverna_da_luz_3_niveis_sons.html',
     isInternal: true,
     status: 'online',
     description: 'Jogo em HTML5/JavaScript hospedado localmente no próprio app.',
