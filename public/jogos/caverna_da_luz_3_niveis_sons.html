@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Caverna da Luz — 3 Níveis</title>
+  <style>
+    :root {
+      --page: #f3f6fb;
+      --surface: #ffffff;
+      --surface-2: #eef3f8;
+      --ink: #162033;
+      --muted: #69758a;
+      --line: #dfe6ef;
+      --blue: #2f80ed;
+      --blue-soft: #eaf3ff;
+      --yellow: #ffc94a;
+      --orange: #ff9338;
+      --green: #2dbf78;
+      --red: #ef476f;
+      --purple: #7857d8;
+      --shadow: 0 16px 50px rgba(30, 49, 77, .10);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      padding: 18px;
+      background: var(--page);
+      color: var(--ink);
+      font-family: Inter, ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button { font: inherit; }
+
+    .app {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      letter-spacing: -.04em;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .level-tabs {
+      display: inline-flex;
+      gap: 5px;
+      padding: 5px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    .level-tab {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      min-width: 42px;
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+
+    .level-tab.active {
+      background: var(--surface);
+      color: var(--blue);
+      box-shadow: 0 4px 14px rgba(30, 49, 77, .10);
+    }
+
+    .game-card {
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .game-top {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .level-info {
+      min-width: 0;
+    }
+
+    .level-info strong {
+      display: block;
+      font-size: 1rem;
+    }
+
+    .level-info span {
+      color: var(--muted);
+      font-size: .8rem;
+    }
+
+    .mini-hud {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fbfcfe;
+      color: var(--ink);
+      font-size: .8rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .pill.light.low { color: #b76b00; background: #fff6df; border-color: #f8db91; }
+    .pill.light.danger { color: #c92b53; background: #fff0f4; border-color: #ffc6d4; }
+
+    .sound-toggle {
+      border: 1px solid var(--line);
+      cursor: pointer;
+      transition: background .18s ease, transform .08s ease;
+    }
+    .sound-toggle:hover { background: var(--blue-soft); }
+    .sound-toggle:active { transform: scale(.96); }
+    .sound-toggle.off { color: var(--muted); background: #f3f5f8; }
+
+    .canvas-wrap {
+      position: relative;
+      overflow: hidden;
+      background: #0a0d16;
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      aspect-ratio: 16 / 8.7;
+      touch-action: none;
+    }
+
+    .progress-track {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 16px;
+      height: 7px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255,255,255,.13);
+      backdrop-filter: blur(5px);
+      pointer-events: none;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #74d8ff, #6ff0b2);
+      transition: width .18s ease;
+    }
+
+    .level-badge {
+      position: absolute;
+      left: 18px;
+      top: 31px;
+      padding: 6px 9px;
+      border-radius: 10px;
+      background: rgba(9, 13, 25, .70);
+      color: rgba(255,255,255,.88);
+      font-size: .72rem;
+      font-weight: 800;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(310px, .75fr);
+      gap: 14px;
+    }
+
+    .math-panel,
+    .control-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(30, 49, 77, .07);
+    }
+
+    .math-panel { padding: 16px 18px; }
+
+    .math-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .math-head h2,
+    .control-panel h2 {
+      margin: 0;
+      font-size: .92rem;
+      letter-spacing: -.01em;
+    }
+
+    .rule-chip {
+      background: var(--blue-soft);
+      color: var(--blue);
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: .72rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .equation {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 15px;
+      background: #f7f9fc;
+      border: 1px solid var(--line);
+      font-size: clamp(1.45rem, 5vw, 2.25rem);
+      font-weight: 950;
+      letter-spacing: -.035em;
+      text-align: center;
+    }
+
+    .equation .result { color: var(--green); }
+    .equation.danger .result { color: var(--red); }
+    .equation .penalty { color: var(--purple); }
+
+    .math-copy {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.45;
+    }
+
+    details {
+      margin-top: 10px;
+      border-top: 1px solid var(--line);
+      padding-top: 9px;
+    }
+
+    summary {
+      color: var(--blue);
+      cursor: pointer;
+      font-size: .78rem;
+      font-weight: 900;
+      user-select: none;
+    }
+
+    pre {
+      margin: 8px 0 0;
+      padding: 11px;
+      overflow-x: auto;
+      border-radius: 12px;
+      background: #121827;
+      color: #e7edf8;
+      font-size: .72rem;
+      line-height: 1.55;
+    }
+
+    .control-panel {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.35fr;
+      gap: 8px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 14px;
+      min-height: 50px;
+      cursor: pointer;
+      font-weight: 950;
+      color: var(--ink);
+      background: #edf1f6;
+      box-shadow: 0 4px 0 #d5dce6;
+      transition: transform .08s ease, box-shadow .08s ease, filter .15s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:hover { filter: brightness(1.02); }
+    .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #d5dce6; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn.torch {
+      background: linear-gradient(135deg, #ffd764, #ffad45);
+      box-shadow: 0 4px 0 #d68c2c;
+    }
+    .btn.secondary {
+      min-height: 40px;
+      box-shadow: none;
+      color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .message {
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 13px;
+      background: #f7f9fc;
+      border: 1px solid var(--line);
+      color: #47556b;
+      font-size: .82rem;
+      line-height: 1.4;
+    }
+
+    .key-help {
+      color: var(--muted);
+      font-size: .72rem;
+      text-align: center;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(16, 25, 40, .50);
+      backdrop-filter: blur(7px);
+    }
+    .overlay.hidden { display: none; }
+
+    .modal {
+      width: min(460px, 100%);
+      padding: 24px;
+      text-align: center;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 30px 90px rgba(15, 30, 50, .28);
+    }
+    .modal .emoji { font-size: 3.1rem; }
+    .modal h2 { margin: 10px 0 7px; }
+    .modal p { margin: 0 0 17px; color: var(--muted); line-height: 1.5; }
+    .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .modal-actions .btn { min-height: 48px; box-shadow: none; }
+    .modal-actions .primary { color: #fff; background: var(--blue); }
+
+    @media (max-width: 850px) {
+      .header { align-items: flex-start; flex-direction: column; }
+      .bottom-grid { grid-template-columns: 1fr; }
+      .game-top { grid-template-columns: 1fr; }
+      .mini-hud { justify-content: flex-start; }
+    }
+
+    @media (max-width: 620px) {
+      body { padding: 10px; }
+      .brand p { display: none; }
+      .level-tabs { width: 100%; }
+      .level-tab { flex: 1; }
+      .game-card { border-radius: 18px; }
+      .game-top { padding: 10px 12px; }
+      .pill { font-size: .74rem; padding: 0 8px; }
+      .controls { grid-template-columns: 1fr 1fr; }
+      .btn.torch { grid-column: 1 / -1; }
+      .modal-actions { grid-template-columns: 1fr; }
+      .progress-track { left: 10px; right: 10px; top: 10px; }
+      .level-badge { left: 10px; top: 25px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <div class="brand">
+        <h1>🕯️ Caverna da Luz</h1>
+        <p>Use a subtração para manter a caverna iluminada e chegar ao cristal.</p>
+      </div>
+      <nav class="level-tabs" aria-label="Escolher nível">
+        <button class="level-tab active" data-level="0" aria-label="Nível 1">1</button>
+        <button class="level-tab" data-level="1" aria-label="Nível 2">2</button>
+        <button class="level-tab" data-level="2" aria-label="Nível 3">3</button>
+      </nav>
+    </header>
+
+    <section class="game-card">
+      <div class="game-top">
+        <div class="level-info">
+          <strong id="levelTitle">Nível 1 · Explorador</strong>
+          <span id="levelGoal">Aprenda a regra e escolha onde colocar suas tochas.</span>
+        </div>
+
+        <div class="mini-hud" aria-label="Informações da partida">
+          <span class="pill">📍 <b id="positionValue">0 / 26</b></span>
+          <span class="pill light" id="lightPill">☀️ <b id="lightValue">14</b></span>
+          <span class="pill">🕯️ <b id="torchValue">2</b></span>
+          <span class="pill">❤️ <b id="lifeValue">3</b></span>
+          <span class="pill">⏱️ <b id="timeValue">01:15</b></span>
+          <button class="pill sound-toggle" id="soundBtn" type="button" aria-pressed="true" title="Ativar ou desativar sons">🔊 <b>Som</b></button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="game" width="1000" height="544" aria-label="Jogo Caverna da Luz"></canvas>
+        <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+        <div id="canvasLevelBadge" class="level-badge">Nível 1 · sem zonas de sombra</div>
+      </div>
+    </section>
+
+    <section class="bottom-grid">
+      <article class="math-panel">
+        <div class="math-head">
+          <h2>🧠 Matemática do jogo</h2>
+          <span class="rule-chip">Luz = 14 − distância</span>
+        </div>
+        <div id="equation" class="equation">14 − 0 = <span class="result">14</span></div>
+        <p id="explain" class="math-copy">A tocha está no mesmo bloco do jogador. A distância é 0, então a luz fica no máximo.</p>
+        <details>
+          <summary>Ver como isso aparece no código</summary>
+          <pre id="codePreview">distancia = Math.abs(jogadorX - tochaX);
+luz = Math.max(0, 14 - distancia);
+if (luz === 0) aparecerMonstro();</pre>
+        </details>
+      </article>
+
+      <article class="control-panel">
+        <h2>🎮 Controles</h2>
+        <div class="controls">
+          <button class="btn" id="leftBtn" aria-label="Andar para a esquerda">⬅️</button>
+          <button class="btn" id="rightBtn" aria-label="Andar para a direita">➡️</button>
+          <button class="btn torch" id="torchBtn">🕯️ Colocar tocha</button>
+        </div>
+        <div id="message" class="message">Chegue ao cristal sem deixar a conta da luz chegar a zero.</div>
+        <button class="btn secondary" id="restartBtn">↻ Reiniciar nível</button>
+        <div class="key-help">Teclado: ← → ou A/D · Espaço/T coloca tocha</div>
+      </article>
+    </section>
+  </main>
+
+  <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div id="modalEmoji" class="emoji">🏆</div>
+      <h2 id="modalTitle">Nível concluído!</h2>
+      <p id="modalText"></p>
+      <div class="modal-actions">
+        <button class="btn" id="playAgainBtn">Jogar novamente</button>
+        <button class="btn primary" id="nextLevelBtn">Próximo nível</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ============================================================
+  // 3 NÍVEIS DE DIFICULDADE
+  // A regra principal continua sendo 14 - distância.
+  // Nos níveis 2 e 3 aparecem zonas de sombra que adicionam
+  // uma segunda subtração: 14 - distância - penalidade.
+  // ============================================================
+  const MAX_LIGHT = 14;
+  const BLOCK = 64;
+
+  const LEVELS = [
+    {
+      name: "Explorador",
+      goal: "Aprenda a regra e escolha onde colocar suas tochas.",
+      lastBlock: 26,
+      torches: 2,
+      lives: 3,
+      time: 75,
+      darkZones: []
+    },
+    {
+      name: "Aventureiro",
+      goal: "Uma zona de sombra tira 2 pontos extras de luz.",
+      lastBlock: 40,
+      torches: 3,
+      lives: 3,
+      time: 70,
+      darkZones: [{ start: 18, end: 21, penalty: 2 }]
+    },
+    {
+      name: "Guardião da Caverna",
+      goal: "Duas zonas de sombra, menos vidas e menos tempo para decidir.",
+      lastBlock: 52,
+      torches: 4,
+      lives: 2,
+      time: 65,
+      darkZones: [
+        { start: 15, end: 18, penalty: 2 },
+        { start: 34, end: 38, penalty: 3 }
+      ]
+    }
+  ];
+
+  // ============================================================
+  // ELEMENTOS DA INTERFACE
+  // ============================================================
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  const levelTitle = document.getElementById("levelTitle");
+  const levelGoal = document.getElementById("levelGoal");
+  const canvasLevelBadge = document.getElementById("canvasLevelBadge");
+  const progressFill = document.getElementById("progressFill");
+
+  const positionValue = document.getElementById("positionValue");
+  const lightValue = document.getElementById("lightValue");
+  const lightPill = document.getElementById("lightPill");
+  const torchValue = document.getElementById("torchValue");
+  const lifeValue = document.getElementById("lifeValue");
+  const timeValue = document.getElementById("timeValue");
+  const equation = document.getElementById("equation");
+  const explain = document.getElementById("explain");
+  const codePreview = document.getElementById("codePreview");
+  const message = document.getElementById("message");
+
+  const leftBtn = document.getElementById("leftBtn");
+  const rightBtn = document.getElementById("rightBtn");
+  const torchBtn = document.getElementById("torchBtn");
+  const restartBtn = document.getElementById("restartBtn");
+  const soundBtn = document.getElementById("soundBtn");
+  const playAgainBtn = document.getElementById("playAgainBtn");
+  const nextLevelBtn = document.getElementById("nextLevelBtn");
+  const levelTabs = [...document.querySelectorAll(".level-tab")];
+
+  const overlay = document.getElementById("overlay");
+  const modalEmoji = document.getElementById("modalEmoji");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalText = document.getElementById("modalText");
+
+  // ============================================================
+  // ESTADO
+  // ============================================================
+  let levelIndex = 0;
+  let level = LEVELS[levelIndex];
+  let playerX = 0;
+  let torches = [0];
+  let torchInventory = level.torches;
+  let lives = level.lives;
+  let timeLeft = level.time;
+  let started = false;
+  let gameOver = false;
+  let inputLocked = false;
+  let timerId = null;
+  let cameraX = 0;
+  let lastFrame = performance.now();
+  let walkBounce = 0;
+  let torchFlashUntil = 0;
+  let screenShake = 0;
+  let soundEnabled = true;
+  let audioCtx = null;
+
+  const monster = {
+    active: false,
+    start: 0,
+    damageApplied: false,
+    returnApplied: false,
+    safeX: 0,
+    pendingGameOver: false
+  };
+
+  // ============================================================
+  // MATEMÁTICA DO JOGO
+  // ============================================================
+  function getNearestTorchInfo() {
+    let nearest = torches[0];
+    let minDistance = Math.abs(playerX - nearest);
+
+    for (const torchX of torches) {
+      const distance = Math.abs(playerX - torchX);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = torchX;
+      }
+    }
+
+    return { torchX: nearest, distance: minDistance };
+  }
+
+  function getDarkPenalty(x = playerX) {
+    const zone = level.darkZones.find(z => x >= z.start && x <= z.end);
+    return zone ? zone.penalty : 0;
+  }
+
+  function calculateLight() {
+    const { distance } = getNearestTorchInfo();
+    const penalty = getDarkPenalty();
+    return Math.max(0, MAX_LIGHT - distance - penalty);
+  }
+
+  // ============================================================
+  // FLUXO DA PARTIDA
+  // ============================================================
+  function startIfNeeded() {
+    if (started || gameOver) return;
+    started = true;
+
+    timerId = setInterval(() => {
+      if (gameOver || inputLocked) return;
+      timeLeft--;
+      updateHUD();
+
+      if (timeLeft <= 0) {
+        finishGame(false, "O tempo acabou antes de você chegar ao cristal.");
+      }
+    }, 1000);
+  }
+
+  function move(direction) {
+    if (gameOver || inputLocked) return;
+    startIfNeeded();
+
+    const previousLight = calculateLight();
+    const nextX = Math.max(0, Math.min(level.lastBlock, playerX + direction));
+    if (nextX === playerX) return;
+
+    playerX = nextX;
+    walkBounce = 1;
+
+    const light = calculateLight();
+    playSfx("step");
+
+    if (light > 0 && light <= 2 && previousLight > 2) {
+      playSfx("danger");
+    }
+
+    if (light === 0) {
+      triggerMonster();
+      updateHUD();
+      return;
+    }
+
+    if (playerX === level.lastBlock) {
+      finishGame(true);
+      return;
+    }
+
+    if (getDarkPenalty() > 0) {
+      setMessage(`🌫️ Zona de sombra! Ela tira ${getDarkPenalty()} ponto(s) extras. Observe a conta completa.`);
+    } else if (light <= 2) {
+      setMessage(`👀 Algo está observando você… restam só ${light} pontos de luz.`);
+    } else if (light <= 5) {
+      setMessage(`⚠️ Está escurecendo. Sua luz caiu para ${light}. Pense onde vale colocar a próxima tocha.`);
+    } else {
+      setMessage("Avance e observe como a distância muda a conta da luz.");
+    }
+
+    updateHUD();
+  }
+
+  function placeTorch() {
+    if (gameOver || inputLocked) return;
+    startIfNeeded();
+
+    if (torchInventory <= 0) {
+      setMessage("Você não tem mais tochas. Agora precisa aproveitar bem as que já colocou.");
+      return;
+    }
+
+    if (torches.includes(playerX)) {
+      setMessage("Já existe uma tocha neste bloco. Guarde a próxima para outro ponto.");
+      return;
+    }
+
+    torches.push(playerX);
+    torches.sort((a, b) => a - b);
+    torchInventory--;
+    torchFlashUntil = performance.now() + 420;
+
+    const penalty = getDarkPenalty();
+    if (penalty > 0) {
+      setMessage(`🕯️ Tocha colocada! Distância = 0, mas a sombra ainda tira ${penalty}: 14 − 0 − ${penalty} = ${14 - penalty}.`);
+    } else {
+      setMessage(`✨ Tocha no bloco ${playerX}: a distância virou 0, então 14 − 0 = 14.`);
+    }
+
+    playSfx("torch");
+    updateHUD();
+  }
+
+  // ============================================================
+  // MONSTRO EM 3 ETAPAS:
+  // 1) emerge da escuridão;
+  // 2) avança até o jogador;
+  // 3) causa dano e o jogador retorna à última tocha segura.
+  // ============================================================
+  function triggerMonster() {
+    if (monster.active) return;
+
+    const safeTorches = torches.filter(t => t < playerX);
+    monster.safeX = safeTorches.length ? Math.max(...safeTorches) : 0;
+    monster.active = true;
+    monster.start = performance.now();
+    monster.damageApplied = false;
+    monster.returnApplied = false;
+    monster.pendingGameOver = false;
+    inputLocked = true;
+    screenShake = 0;
+
+    setMessage("🌑 A conta chegou a 0. Olhos aparecem na escuridão…");
+    playSfx("monsterAppear");
+  }
+
+  function updateMonster(now) {
+    if (!monster.active) return;
+
+    const elapsed = now - monster.start;
+
+    if (elapsed >= 610 && !monster.damageApplied) {
+      monster.damageApplied = true;
+      lives--;
+      screenShake = 15;
+      playSfx("hit");
+      updateHUD();
+    }
+
+    if (elapsed >= 980 && !monster.returnApplied) {
+      monster.returnApplied = true;
+      playerX = monster.safeX;
+      cameraX = Math.max(0, playerX * BLOCK - canvas.width * .38);
+      setMessage("👾 O monstro atacou. Você perdeu 1 vida e voltou para a última tocha segura.");
+      updateHUD();
+
+      if (lives <= 0) monster.pendingGameOver = true;
+    }
+
+    if (elapsed >= 1450) {
+      monster.active = false;
+      inputLocked = false;
+
+      if (monster.pendingGameOver) {
+        finishGame(false, "A luz chegou a zero vezes demais e os monstros venceram esta rodada.");
+      }
+    }
+  }
+
+  function finishGame(won, customText = "") {
+    if (gameOver) return;
+    gameOver = true;
+    inputLocked = true;
+    if (timerId) clearInterval(timerId);
+
+    const usedTorches = level.torches - torchInventory;
+    const score = Math.max(0, timeLeft * 10 + lives * 120 + torchInventory * 80 + (levelIndex + 1) * 150);
+
+    playSfx(won ? "win" : "lose");
+
+    modalEmoji.textContent = won ? (levelIndex === 2 ? "💎" : "🏆") : "🌑";
+    modalTitle.textContent = won ? `Nível ${levelIndex + 1} concluído!` : "Fim da rodada";
+    modalText.textContent = won
+      ? `Você chegou ao cristal com ${timeLeft}s restantes, ${lives} vida(s) e usou ${usedTorches} tocha(s). Pontuação: ${score}.`
+      : `${customText} Tente colocar a próxima tocha antes de a conta chegar a zero.`;
+
+    nextLevelBtn.textContent = levelIndex < LEVELS.length - 1 ? "Próximo nível" : "Voltar ao nível 1";
+    nextLevelBtn.style.display = won ? "block" : "none";
+    overlay.classList.remove("hidden");
+    updateButtons();
+  }
+
+  function loadLevel(index) {
+    if (timerId) clearInterval(timerId);
+
+    levelIndex = Math.max(0, Math.min(LEVELS.length - 1, index));
+    level = LEVELS[levelIndex];
+
+    playerX = 0;
+    torches = [0];
+    torchInventory = level.torches;
+    lives = level.lives;
+    timeLeft = level.time;
+    started = false;
+    gameOver = false;
+    inputLocked = false;
+    timerId = null;
+    cameraX = 0;
+    walkBounce = 0;
+    torchFlashUntil = 0;
+    screenShake = 0;
+
+    monster.active = false;
+    monster.damageApplied = false;
+    monster.returnApplied = false;
+    monster.pendingGameOver = false;
+
+    overlay.classList.add("hidden");
+
+    levelTabs.forEach((tab, i) => tab.classList.toggle("active", i === levelIndex));
+    levelTitle.textContent = `Nível ${levelIndex + 1} · ${level.name}`;
+    levelGoal.textContent = level.goal;
+    canvasLevelBadge.textContent = level.darkZones.length
+      ? `Nível ${levelIndex + 1} · ${level.darkZones.length} zona(s) de sombra`
+      : `Nível ${levelIndex + 1} · sem zonas de sombra`;
+
+    codePreview.textContent = level.darkZones.length
+      ? `distancia = Math.abs(jogadorX - tochaX);\npenalidade = zonaDeSombra;\nluz = Math.max(0, 14 - distancia - penalidade);\nif (luz === 0) aparecerMonstro();`
+      : `distancia = Math.abs(jogadorX - tochaX);\nluz = Math.max(0, 14 - distancia);\nif (luz === 0) aparecerMonstro();`;
+
+    setMessage(levelIndex === 0
+      ? "Chegue ao cristal sem deixar a conta da luz chegar a zero."
+      : "Agora existem zonas de sombra. Elas acrescentam uma nova subtração à conta.");
+
+    updateHUD();
+  }
+
+  function setMessage(text) {
+    message.textContent = text;
+  }
+
+  // ============================================================
+  // HUD + EXPLICAÇÃO VISUAL
+  // ============================================================
+  function updateHUD() {
+    const { torchX, distance } = getNearestTorchInfo();
+    const penalty = getDarkPenalty();
+    const light = calculateLight();
+
+    positionValue.textContent = `${playerX} / ${level.lastBlock}`;
+    lightValue.textContent = light;
+    torchValue.textContent = torchInventory;
+    lifeValue.textContent = lives;
+    timeValue.textContent = formatTime(timeLeft);
+    progressFill.style.width = `${(playerX / level.lastBlock) * 100}%`;
+
+    lightPill.classList.toggle("low", light <= 5 && light > 2);
+    lightPill.classList.toggle("danger", light <= 2);
+
+    if (penalty > 0) {
+      equation.innerHTML = `14 − ${distance} <span class="penalty">− ${penalty}</span> = <span class="result">${light}</span>`;
+    } else {
+      equation.innerHTML = `14 − ${distance} = <span class="result">${light}</span>`;
+    }
+    equation.classList.toggle("danger", light <= 2);
+
+    if (penalty > 0) {
+      explain.textContent = `A tocha mais próxima está no bloco ${torchX}. Distância = ${distance}. A zona de sombra tira mais ${penalty}: 14 − ${distance} − ${penalty} = ${light}.`;
+    } else if (distance === 0) {
+      explain.textContent = `Você está no mesmo bloco da tocha. Distância = 0, então 14 − 0 = 14.`;
+    } else if (light === 0) {
+      explain.textContent = `Você ficou a ${distance} blocos da tocha. Como a conta chegou a 0, o código chama o monstro.`;
+    } else {
+      explain.textContent = `A tocha mais próxima está no bloco ${torchX}. Você está a ${distance} bloco(s) dela: 14 − ${distance} = ${light}.`;
+    }
+
+    updateButtons();
+  }
+
+  function updateButtons() {
+    const locked = gameOver || inputLocked;
+    leftBtn.disabled = locked || playerX <= 0;
+    rightBtn.disabled = locked || playerX >= level.lastBlock;
+    torchBtn.disabled = locked || torchInventory <= 0;
+  }
+
+  function formatTime(totalSeconds) {
+    const min = Math.floor(Math.max(0, totalSeconds) / 60).toString().padStart(2, "0");
+    const sec = (Math.max(0, totalSeconds) % 60).toString().padStart(2, "0");
+    return `${min}:${sec}`;
+  }
+
+  // ============================================================
+  // ÁUDIO SIMPLES, SEM ARQUIVOS EXTERNOS
+  //
+  // Todos os efeitos são sintetizados pela Web Audio API.
+  // Isso mantém o projeto em um único HTML e funcionando offline.
+  // O navegador só libera áudio depois da primeira interação do jogador.
+  // ============================================================
+  function ensureAudio() {
+    if (!soundEnabled) return null;
+
+    try {
+      if (!audioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return null;
+        audioCtx = new AudioCtx();
+      }
+
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function tone({
+    frequency = 440,
+    endFrequency = frequency,
+    duration = .08,
+    volume = .035,
+    type = "sine",
+    delay = 0
+  } = {}) {
+    const audio = ensureAudio();
+    if (!audio) return;
+
+    const start = audio.currentTime + delay;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(Math.max(1, frequency), start);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + .008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + .02);
+  }
+
+  function noiseBurst({ duration = .14, volume = .025, delay = 0 } = {}) {
+    const audio = ensureAudio();
+    if (!audio) return;
+
+    const sampleRate = audio.sampleRate;
+    const buffer = audio.createBuffer(1, Math.ceil(sampleRate * duration), sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < data.length; i++) {
+      const fade = 1 - i / data.length;
+      data[i] = (Math.random() * 2 - 1) * fade;
+    }
+
+    const source = audio.createBufferSource();
+    const filter = audio.createBiquadFilter();
+    const gain = audio.createGain();
+    const start = audio.currentTime + delay;
+
+    source.buffer = buffer;
+    filter.type = "lowpass";
+    filter.frequency.value = 850;
+    gain.gain.setValueAtTime(volume, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(audio.destination);
+    source.start(start);
+  }
+
+  function playSfx(name) {
+    if (!soundEnabled) return;
+
+    switch (name) {
+      case "step":
+        // Passo curto e discreto para não cansar durante a partida.
+        tone({ frequency: 150, endFrequency: 115, duration: .045, volume: .018, type: "triangle" });
+        break;
+
+      case "torch":
+        // Pequeno som ascendente de confirmação.
+        tone({ frequency: 430, endFrequency: 620, duration: .09, volume: .035, type: "triangle" });
+        tone({ frequency: 690, endFrequency: 860, duration: .11, volume: .025, type: "sine", delay: .055 });
+        break;
+
+      case "danger":
+        // Dois pulsos curtos quando a luz entra na zona crítica.
+        tone({ frequency: 230, endFrequency: 190, duration: .10, volume: .033, type: "square" });
+        tone({ frequency: 230, endFrequency: 185, duration: .10, volume: .028, type: "square", delay: .14 });
+        break;
+
+      case "monsterAppear":
+        // Grave descendente + ruído para o surgimento do monstro.
+        tone({ frequency: 115, endFrequency: 48, duration: .38, volume: .055, type: "sawtooth" });
+        noiseBurst({ duration: .32, volume: .028 });
+        break;
+
+      case "hit":
+        // Impacto do ataque.
+        tone({ frequency: 105, endFrequency: 52, duration: .16, volume: .07, type: "square" });
+        noiseBurst({ duration: .16, volume: .045 });
+        break;
+
+      case "win":
+        // Três notas ascendentes de vitória.
+        tone({ frequency: 523, endFrequency: 523, duration: .12, volume: .035, type: "triangle" });
+        tone({ frequency: 659, endFrequency: 659, duration: .12, volume: .035, type: "triangle", delay: .12 });
+        tone({ frequency: 784, endFrequency: 880, duration: .24, volume: .04, type: "triangle", delay: .24 });
+        break;
+
+      case "lose":
+        // Duas notas descendentes, curtas e não assustadoras.
+        tone({ frequency: 260, endFrequency: 190, duration: .18, volume: .035, type: "triangle" });
+        tone({ frequency: 185, endFrequency: 110, duration: .28, volume: .035, type: "triangle", delay: .16 });
+        break;
+    }
+  }
+
+  function updateSoundButton() {
+    soundBtn.classList.toggle("off", !soundEnabled);
+    soundBtn.setAttribute("aria-pressed", String(soundEnabled));
+    soundBtn.innerHTML = soundEnabled ? "🔊 <b>Som</b>" : "🔇 <b>Som</b>";
+    soundBtn.title = soundEnabled ? "Desativar sons" : "Ativar sons";
+  }
+
+  // ============================================================
+  // CANVAS
+  // ============================================================
+  function draw(now) {
+    const dt = Math.min(0.04, (now - lastFrame) / 1000);
+    lastFrame = now;
+
+    if (walkBounce > 0) walkBounce = Math.max(0, walkBounce - dt * 5);
+    if (screenShake > 0) screenShake = Math.max(0, screenShake - dt * 40);
+
+    updateMonster(now);
+
+    const targetCamera = Math.max(0, playerX * BLOCK - canvas.width * .38);
+    const maxCamera = Math.max(0, (level.lastBlock + 2) * BLOCK - canvas.width);
+    cameraX += (Math.min(targetCamera, maxCamera) - cameraX) * 0.09;
+
+    ctx.save();
+    if (screenShake > 0) {
+      ctx.translate((Math.random() - .5) * screenShake, (Math.random() - .5) * screenShake * .6);
+    }
+
+    drawBackground();
+    drawCave(now);
+    drawDarkZones(now);
+    drawTorches(now);
+    drawExit(now);
+    drawPlayer(now);
+    drawLightOverlay();
+    drawWarningEyes(now);
+    drawMonster(now);
+    drawTorchFlash(now);
+
+    ctx.restore();
+    requestAnimationFrame(draw);
+  }
+
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    g.addColorStop(0, "#151a2b");
+    g.addColorStop(.56, "#0c1120");
+    g.addColorStop(1, "#070a12");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function drawCave(now) {
+    const groundY = 425;
+    const start = Math.max(0, Math.floor(cameraX / BLOCK) - 1);
+    const end = Math.min(level.lastBlock + 1, start + Math.ceil(canvas.width / BLOCK) + 3);
+
+    for (let i = start; i <= end; i++) {
+      const x = i * BLOCK - cameraX;
+      const variation = (i * 17) % 3;
+
+      ctx.fillStyle = variation === 0 ? "#30364a" : variation === 1 ? "#292f42" : "#353b50";
+      ctx.fillRect(x, groundY, BLOCK + 1, 120);
+      ctx.strokeStyle = "rgba(255,255,255,.05)";
+      ctx.strokeRect(x + .5, groundY + .5, BLOCK, 64);
+
+      const ceilingH = 45 + ((i * 23) % 34);
+      ctx.fillStyle = variation === 1 ? "#252a3b" : "#2a3042";
+      ctx.fillRect(x, 0, BLOCK + 1, ceilingH);
+
+      if (i % 8 === 5) {
+        ctx.fillStyle = "rgba(107,216,255,.45)";
+        ctx.beginPath();
+        ctx.moveTo(x + 48, groundY - 4);
+        ctx.lineTo(x + 55, groundY - 21);
+        ctx.lineTo(x + 61, groundY - 4);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    ctx.strokeStyle = "rgba(255,255,255,.022)";
+    ctx.lineWidth = 2;
+    for (let y = 120; y < 390; y += 60) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + Math.sin(now * .0003 + y) * 3);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+  }
+
+  function drawDarkZones(now) {
+    for (const zone of level.darkZones) {
+      const x1 = zone.start * BLOCK - cameraX;
+      const width = (zone.end - zone.start + 1) * BLOCK;
+      if (x1 > canvas.width || x1 + width < 0) continue;
+
+      const pulse = .10 + (Math.sin(now * .004) + 1) * .025;
+      const g = ctx.createLinearGradient(x1, 0, x1 + width, 0);
+      g.addColorStop(0, "rgba(106,73,190,0)");
+      g.addColorStop(.18, `rgba(106,73,190,${pulse})`);
+      g.addColorStop(.82, `rgba(106,73,190,${pulse})`);
+      g.addColorStop(1, "rgba(106,73,190,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(x1, 90, width, 335);
+
+      ctx.fillStyle = "rgba(196,172,255,.72)";
+      ctx.font = "800 12px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(`SOMBRA −${zone.penalty}`, x1 + width / 2, 105);
+    }
+  }
+
+  function drawTorches(now) {
+    for (const torchX of torches) {
+      const x = torchX * BLOCK - cameraX + BLOCK / 2;
+      if (x < -80 || x > canvas.width + 80) continue;
+
+      const y = 397;
+      const flicker = Math.sin(now * .013 + torchX * 1.7) * 3;
+      const glow = ctx.createRadialGradient(x, y - 38, 0, x, y - 38, 92 + flicker * 2);
+      glow.addColorStop(0, "rgba(255,220,90,.52)");
+      glow.addColorStop(.38, "rgba(255,150,50,.17)");
+      glow.addColorStop(1, "rgba(255,120,20,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(x - 105, y - 145, 210, 195);
+
+      ctx.fillStyle = "#74462d";
+      ctx.fillRect(x - 5, y - 30, 10, 34);
+      ctx.fillStyle = "#ff8a36";
+      ctx.beginPath();
+      ctx.moveTo(x, y - 30);
+      ctx.quadraticCurveTo(x - 11, y - 44, x - 1, y - 57 - flicker);
+      ctx.quadraticCurveTo(x + 12, y - 44, x, y - 30);
+      ctx.fill();
+      ctx.fillStyle = "#fff087";
+      ctx.beginPath();
+      ctx.moveTo(x, y - 34);
+      ctx.quadraticCurveTo(x - 6, y - 44, x, y - 49 - flicker * .4);
+      ctx.quadraticCurveTo(x + 6, y - 43, x, y - 34);
+      ctx.fill();
+    }
+  }
+
+  function drawExit(now) {
+    const x = level.lastBlock * BLOCK - cameraX + BLOCK / 2;
+    const y = 392;
+    if (x < -100 || x > canvas.width + 120) return;
+
+    const pulse = 1 + Math.sin(now * .006) * .08;
+    ctx.save();
+    ctx.translate(x, y - 25);
+    ctx.scale(pulse, pulse);
+
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 86);
+    glow.addColorStop(0, "rgba(107,229,255,.62)");
+    glow.addColorStop(1, "rgba(107,229,255,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(-90, -90, 180, 180);
+
+    ctx.fillStyle = "#7fe7ff";
+    ctx.beginPath();
+    ctx.moveTo(0, -52);
+    ctx.lineTo(24, -12);
+    ctx.lineTo(13, 33);
+    ctx.lineTo(-15, 34);
+    ctx.lineTo(-25, -11);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255,255,255,.68)";
+    ctx.beginPath();
+    ctx.moveTo(-3, -42);
+    ctx.lineTo(8, -12);
+    ctx.lineTo(2, 13);
+    ctx.lineTo(-7, -9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPlayer(now) {
+    const x = playerX * BLOCK - cameraX + BLOCK / 2;
+    const groundY = 425;
+    const bob = Math.sin(now * .012) * 1.3 + walkBounce * Math.sin(now * .05) * 5;
+    const y = groundY - 62 + bob;
+
+    ctx.fillStyle = "rgba(0,0,0,.28)";
+    ctx.beginPath();
+    ctx.ellipse(x, groundY - 2, 24, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#4cb4ff";
+    roundRect(ctx, x - 20, y + 22, 40, 38, 8, true, false);
+    ctx.fillStyle = "#ffd2a6";
+    roundRect(ctx, x - 18, y - 6, 36, 34, 8, true, false);
+    ctx.fillStyle = "#5a3b2e";
+    roundRect(ctx, x - 18, y - 8, 36, 15, 7, true, false);
+    ctx.fillStyle = "#1f2335";
+    ctx.fillRect(x - 9, y + 9, 4, 4);
+    ctx.fillRect(x + 5, y + 9, 4, 4);
+    ctx.fillStyle = "#30406c";
+    ctx.fillRect(x - 15, y + 56, 12, 20);
+    ctx.fillRect(x + 3, y + 56, 12, 20);
+  }
+
+  function drawLightOverlay() {
+    const light = calculateLight();
+    const darkness = Math.min(.89, .16 + (1 - light / MAX_LIGHT) * .73);
+    const x = playerX * BLOCK - cameraX + BLOCK / 2;
+    const radius = 125 + light * 18;
+
+    const g = ctx.createRadialGradient(x, 350, 22, x, 350, radius);
+    g.addColorStop(0, `rgba(0,0,8,${Math.max(.02, darkness * .07)})`);
+    g.addColorStop(.48, `rgba(0,0,8,${darkness * .28})`);
+    g.addColorStop(1, `rgba(0,0,8,${darkness})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // Olhos aparecem ANTES do ataque quando a luz chega a 1 ou 2.
+  function drawWarningEyes(now) {
+    if (monster.active || gameOver) return;
+    const light = calculateLight();
+    if (light > 2 || light <= 0) return;
+
+    const intensity = light === 1 ? .78 : .42;
+    const pulse = .76 + (Math.sin(now * .01) + 1) * .12;
+    const x = canvas.width * .82;
+    const y = 285;
+
+    ctx.save();
+    ctx.globalAlpha = intensity * pulse;
+    ctx.fillStyle = "#ff4965";
+    ctx.fillRect(x - 24, y, 13, 7);
+    ctx.fillRect(x + 11, y, 13, 7);
+    ctx.restore();
+  }
+
+  function drawMonster(now) {
+    if (!monster.active) return;
+    const elapsed = now - monster.start;
+
+    let x, y = 300, scale = 1, alpha = 1;
+    const playerScreenX = playerX * BLOCK - cameraX + BLOCK / 2;
+
+    if (elapsed < 330) {
+      const p = elapsed / 330;
+      x = canvas.width + 90 - p * (canvas.width * .24 + 90);
+      scale = .55 + p * .45;
+      alpha = p;
+    } else if (elapsed < 760) {
+      const p = (elapsed - 330) / 430;
+      const eased = 1 - Math.pow(1 - p, 3);
+      const startX = canvas.width * .76;
+      x = startX + (playerScreenX - startX) * eased;
+      scale = 1 + Math.sin(p * Math.PI) * .26;
+    } else {
+      const p = Math.min(1, (elapsed - 760) / 690);
+      x = playerScreenX + p * 120;
+      alpha = 1 - p;
+      scale = 1.15 - p * .25;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 105);
+    glow.addColorStop(0, "rgba(255,50,80,.34)");
+    glow.addColorStop(1, "rgba(255,50,80,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(-110, -110, 220, 220);
+
+    ctx.fillStyle = "#15121d";
+    ctx.beginPath();
+    ctx.arc(0, 0, 47, 0, Math.PI * 2);
+    ctx.fill();
+    roundRect(ctx, -45, 0, 90, 70, 18, true, false);
+
+    ctx.fillStyle = "#ff4965";
+    ctx.fillRect(-24, -6, 14, 8);
+    ctx.fillRect(10, -6, 14, 8);
+
+    ctx.fillStyle = "#f3f4f8";
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * 13 - 4, 25);
+      ctx.lineTo(i * 13 + 4, 25);
+      ctx.lineTo(i * 13, 37);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    if (elapsed < 500) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, elapsed / 180);
+      ctx.fillStyle = "#ff8aa0";
+      ctx.font = "900 25px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("LUZ = 0", canvas.width / 2, 88);
+      ctx.restore();
+    }
+  }
+
+  function drawTorchFlash(now) {
+    if (now >= torchFlashUntil) return;
+    const t = Math.max(0, (torchFlashUntil - now) / 420);
+    ctx.fillStyle = `rgba(255,218,82,${t * .14})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function roundRect(context, x, y, w, h, r, fill, stroke) {
+    if (typeof r === "number") r = { tl:r, tr:r, br:r, bl:r };
+    context.beginPath();
+    context.moveTo(x + r.tl, y);
+    context.lineTo(x + w - r.tr, y);
+    context.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+    context.lineTo(x + w, y + h - r.br);
+    context.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+    context.lineTo(x + r.bl, y + h);
+    context.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+    context.lineTo(x, y + r.tl);
+    context.quadraticCurveTo(x, y, x + r.tl, y);
+    context.closePath();
+    if (fill) context.fill();
+    if (stroke) context.stroke();
+  }
+
+  // ============================================================
+  // CONTROLES
+  // ============================================================
+  leftBtn.addEventListener("click", () => move(-1));
+  rightBtn.addEventListener("click", () => move(1));
+  torchBtn.addEventListener("click", placeTorch);
+  restartBtn.addEventListener("click", () => loadLevel(levelIndex));
+  playAgainBtn.addEventListener("click", () => loadLevel(levelIndex));
+  nextLevelBtn.addEventListener("click", () => loadLevel((levelIndex + 1) % LEVELS.length));
+
+  levelTabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => loadLevel(index));
+  });
+
+  soundBtn.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    updateSoundButton();
+
+    if (soundEnabled) {
+      ensureAudio();
+      playSfx("torch");
+    }
+  });
+
+  // A primeira interação do usuário desbloqueia o áudio em navegadores móveis.
+  window.addEventListener("pointerdown", () => ensureAudio(), { once: true });
+  window.addEventListener("keydown", () => ensureAudio(), { once: true });
+
+  window.addEventListener("keydown", event => {
+    if (event.repeat) return;
+    if (["ArrowLeft", "ArrowRight", " "].includes(event.key)) event.preventDefault();
+
+    if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") move(-1);
+    if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") move(1);
+    if (event.key === " " || event.key.toLowerCase() === "t") placeTorch();
+  }, { passive: false });
+
+  updateSoundButton();
+  loadLevel(0);
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
